@@ -45,7 +45,7 @@ export const POST = async (req: Request) => {
   const email = await Emailstatus.create(createEmail);
   const x = description.concat(
     "",
-    `<img src="${"http://localhost:3000"}/api/sendmail/${
+    `<img src="${"https://email-sender-lac-five.vercel.app"}/api/sendmail/${
       email?._id
     }" style="display:none;" alt="" />`
   );
