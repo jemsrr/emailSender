@@ -8,62 +8,67 @@ export async function GET() {
     // Connect to the database
     await connect();
 
-    // Fetch all users
-    const email = await Emailstatus.find();
+    // Fetch all email statuses
+    const emails = await Emailstatus.find();
 
-    // Return the users as a JSON response
-    return NextResponse.json(email);
+    // Return the email statuses as a JSON response
+    return NextResponse.json(emails);
   } catch (error) {
-    console.error("Error fetching users:", error);
+    console.error("Error fetching emails:", error);
     return NextResponse.json(
-      { message: "Failed to fetch users" },
+      { message: "Failed to fetch emails" },
       { status: 500 }
     );
   }
 }
 
 export const POST = async (req: Request) => {
-  await connect();
+  try {
+    await connect();
 
-  const { to, subject, description } = await req.json();
+    const { to, subject, description } = await req.json();
 
-  interface SendEmailOptions {
-    email: string;
-    EmailSubject: string;
-    EmailText?: string;
-    EmailHTML?: string;
-  }
+    interface SendEmailOptions {
+      email: string;
+      EmailSubject: string;
+      EmailText?: string;
+      EmailHTML?: string;
+    }
 
-  interface createEmail {
-    EmailSubject: string;
-  }
+    interface CreateEmail {
+      EmailSubject: string;
+    }
 
-  const createEmail: createEmail = {
-    EmailSubject: subject,
-  };
+    const createEmail: CreateEmail = {
+      EmailSubject: subject,
+    };
 
-  const email = await Emailstatus.create(createEmail);
-  const x = description.concat(
-    "",
-    `<img src="${"https://email-sender-lac-five.vercel.app"}/api/sendmail/${
-      email?._id
-    }" style="display:none;" alt="" />`
-  );
-  const emailOptions: SendEmailOptions = {
-    email: to,
-    EmailSubject: subject,
-    EmailHTML: x,
-  };
+    // Create a new email status entry
+    const emailStatus = await Emailstatus.create(createEmail);
+    
+    // Construct the email body with tracking image
+    const emailHTML = `${description}<img src="https://email-sender-lac-five.vercel.app/api/sendmail/${emailStatus._id}" style="display:none;" alt="" />`;
 
-  EmailHelper.sendEmail(emailOptions)
-    .then(async () => {
-      await Emailstatus.findByIdAndUpdate(email?._id, {
-        isEmailSent: true,
-      });
-    })
-    .catch((err) => {
-      console.log(err);
+    const emailOptions: SendEmailOptions = {
+      email: to,
+      EmailSubject: subject,
+      EmailHTML: emailHTML,
+    };
+
+    // Send the email
+    await EmailHelper.sendEmail(emailOptions);
+    
+    // Update the email status as sent
+    await Emailstatus.findByIdAndUpdate(emailStatus._id, {
+      isEmailSent: true,
     });
 
-  return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error sending email:", error);
+    return NextResponse.json(
+      { message: "Failed to send email" },
+      { status: 500 }
+    );
+  }
 };
